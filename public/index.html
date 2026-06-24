@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Business Info</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --ground:   #F5F4F2;
+      --surface:  #FFFFFF;
+      --text:     #1C1C2E;
+      --muted:    #6B6B7B;
+      --border:   #E2E0DC;
+      --accent:   #E07B10;
+      --accent-2: #2A3470;
+      --success:  #0F7B55;
+      --error:    #C0392B;
+      --radius:   8px;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: var(--ground);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 48px 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      width: 100%;
+      max-width: 760px;
+      padding: 40px;
+      box-shadow: 0 1px 3px rgba(28,28,46,0.06), 0 4px 16px rgba(28,28,46,0.04);
+    }
+
+    /* Header */
+    .card-header { margin-bottom: 32px; padding-bottom: 24px; border-bottom: 1px solid var(--border); }
+    .card-header h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; color: var(--text); }
+    .card-header p { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+    /* GSTIN hero field */
+    .gstin-hero {
+      background: var(--ground);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      margin-bottom: 28px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .gstin-hero:focus-within {
+      border-color: var(--accent-2);
+      box-shadow: 0 0 0 3px rgba(42,52,112,0.08);
+    }
+    .gstin-hero.state-loading { border-color: var(--accent); }
+    .gstin-hero.state-success { border-color: var(--success); background: #F0FAF6; }
+    .gstin-hero.state-error   { border-color: var(--error);   background: #FEF5F5; }
+
+    .gstin-label-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+    .gstin-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent-2);
+    }
+    .gstin-counter {
+      font-size: 11px;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .gstin-input {
+      width: 100%;
+      font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+      font-size: 22px;
+      letter-spacing: 0.12em;
+      font-weight: 500;
+      color: var(--text);
+      background: transparent;
+      border: none;
+      outline: none;
+      text-transform: uppercase;
+    }
+    .gstin-input::placeholder { color: #C4C2BE; font-weight: 400; }
+
+    /* Segment annotations */
+    .gstin-segments {
+      display: flex;
+      gap: 0;
+      margin-top: 8px;
+      overflow: hidden;
+    }
+    .seg {
+      font-size: 9px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding-top: 4px;
+      border-top: 2px solid var(--border);
+      white-space: nowrap;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .seg.active { color: var(--accent); border-color: var(--accent); }
+    .seg-state  { flex: 0 0 calc(2 / 15 * 100%); }
+    .seg-pan    { flex: 0 0 calc(10 / 15 * 100%); }
+    .seg-entity { flex: 0 0 calc(1 / 15 * 100%); }
+    .seg-z      { flex: 0 0 calc(1 / 15 * 100%); }
+    .seg-check  { flex: 0 0 calc(1 / 15 * 100%); }
+
+    .gstin-status {
+      margin-top: 10px;
+      font-size: 12px;
+      font-weight: 500;
+      min-height: 18px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .gstin-status.loading { color: var(--accent); }
+    .gstin-status.success { color: var(--success); }
+    .gstin-status.error   { color: var(--error); }
+
+    .spinner {
+      width: 12px; height: 12px;
+      border: 2px solid currentColor;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }
+
+    /* Form grid */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-group.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      color: var(--text);
+    }
+    label .req { color: var(--accent); margin-left: 2px; }
+    label .optional { font-weight: 400; color: var(--muted); margin-left: 4px; }
+
+    input[type="text"],
+    input[type="url"],
+    select {
+      height: 40px;
+      padding: 0 12px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 14px;
+      color: var(--text);
+      background: var(--surface);
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%;
+      appearance: none;
+    }
+    select { background-image: url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L5 5L9 1' stroke='%236B6B7B' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+    input:focus, select:focus { border-color: var(--accent-2); box-shadow: 0 0 0 3px rgba(42,52,112,0.08); }
+
+    .autofilled {
+      border-color: var(--success) !important;
+      background: #F0FAF6 !important;
+      animation: fillPop 0.3s ease;
+    }
+    @keyframes fillPop {
+      0%   { transform: scale(1); }
+      40%  { transform: scale(1.015); }
+      100% { transform: scale(1); }
+    }
+    @media (prefers-reduced-motion: reduce) { .autofilled { animation: none; } }
+
+    /* Address section */
+    .section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent-2);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin: 28px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .addr-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+    /* Footer */
+    .card-footer {
+      margin-top: 32px;
+      padding-top: 24px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .btn {
+      height: 40px;
+      padding: 0 20px;
+      border-radius: var(--radius);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-ghost { background: transparent; border: 1.5px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+    .btn-primary { background: var(--accent-2); color: #fff; }
+    .btn-primary:hover { opacity: 0.88; }
+
+    @media (max-width: 600px) {
+      .card { padding: 24px; }
+      .form-grid, .addr-grid { grid-template-columns: 1fr; }
+      .gstin-input { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="card-header">
+      <h1>Business Info</h1>
+      <p>Company details, priority and address — mandatory for B2B</p>
+    </div>
+
+    <!-- GSTIN hero -->
+    <div class="gstin-hero" id="gstinHero">
+      <div class="gstin-label-row">
+        <span class="gstin-label">TAX ID (GSTIN)</span>
+        <span class="gstin-counter" id="gstinCounter">0 / 15</span>
+      </div>
+      <input
+        type="text"
+        id="gstinInput"
+        class="gstin-input"
+        maxlength="15"
+        placeholder="E.g. 24ABKCS2033B1ZV"
+        autocomplete="off"
+        spellcheck="false"
+        aria-label="GSTIN number"
+      />
+      <div class="gstin-segments">
+        <div class="seg seg-state"  id="seg-state">State</div>
+        <div class="seg seg-pan"    id="seg-pan">PAN (10 chars)</div>
+        <div class="seg seg-entity" id="seg-entity">Entity</div>
+        <div class="seg seg-z"      id="seg-z">Z</div>
+        <div class="seg seg-check"  id="seg-check">Check</div>
+      </div>
+      <div class="gstin-status" id="gstinStatus" aria-live="polite"></div>
+    </div>
+
+    <!-- Main fields -->
+    <div class="form-grid">
+      <div class="form-group">
+        <label for="companyName">Company Name <span class="req">*</span></label>
+        <input type="text" id="companyName" placeholder="Auto-filled from GSTIN" readonly />
+      </div>
+      <div class="form-group">
+        <label for="website">Website <span class="req">*</span></label>
+        <input type="url" id="website" placeholder="E.g. https://acme.com" />
+      </div>
+      <div class="form-group">
+        <label for="industry">Industry <span class="req">*</span></label>
+        <select id="industry">
+          <option value="" disabled selected>Select</option>
+          <option>Technology</option>
+          <option>Manufacturing</option>
+          <option>Retail</option>
+          <option>Healthcare</option>
+          <option>Financial Services</option>
+          <option>Education</option>
+          <option>Other</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="constitution">Constitution <span class="optional">(auto-filled)</span></label>
+        <input type="text" id="constitution" placeholder="Auto-filled from GSTIN" readonly />
+      </div>
+    </div>
+
+    <div class="section-title">Business Address</div>
+
+    <div class="form-grid" style="margin-bottom: 16px;">
+      <div class="form-group">
+        <label for="addressLine1">Address Line 1</label>
+        <input type="text" id="addressLine1" placeholder="Auto-filled from GSTIN" readonly />
+      </div>
+      <div class="form-group">
+        <label for="addressLine2">Address Line 2</label>
+        <input type="text" id="addressLine2" placeholder="Auto-filled from GSTIN" readonly />
+      </div>
+    </div>
+
+    <div class="addr-grid">
+      <div class="form-group">
+        <label for="city">City</label>
+        <input type="text" id="city" placeholder="Auto-filled" readonly />
+      </div>
+      <div class="form-group">
+        <label for="state">State</label>
+        <input type="text" id="state" placeholder="Auto-filled" readonly />
+      </div>
+      <div class="form-group">
+        <label for="pincode">Pin Code</label>
+        <input type="text" id="pincode" placeholder="Auto-filled" readonly />
+      </div>
+    </div>
+
+    <div class="card-footer">
+      <button class="btn btn-ghost" type="button">Cancel</button>
+      <button class="btn btn-primary" type="button">Save Business Info</button>
+    </div>
+  </div>
+
+  <script>
+    const API_URL = 'http://localhost:3000/api/gst-lookup';
+    const GST_REGEX = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/;
+
+    const input    = document.getElementById('gstinInput');
+    const hero     = document.getElementById('gstinHero');
+    const counter  = document.getElementById('gstinCounter');
+    const status   = document.getElementById('gstinStatus');
+
+    const segments = {
+      state:  document.getElementById('seg-state'),
+      pan:    document.getElementById('seg-pan'),
+      entity: document.getElementById('seg-entity'),
+      z:      document.getElementById('seg-z'),
+      check:  document.getElementById('seg-check'),
+    };
+
+    const fields = {
+      companyName:  document.getElementById('companyName'),
+      constitution: document.getElementById('constitution'),
+      addressLine1: document.getElementById('addressLine1'),
+      addressLine2: document.getElementById('addressLine2'),
+      city:         document.getElementById('city'),
+      state:        document.getElementById('state'),
+      pincode:      document.getElementById('pincode'),
+    };
+
+    let debounceTimer = null;
+
+    function updateSegments(len) {
+      segments.state.classList.toggle('active',  len >= 1);
+      segments.pan.classList.toggle('active',    len >= 3);
+      segments.entity.classList.toggle('active', len >= 13);
+      segments.z.classList.toggle('active',      len >= 14);
+      segments.check.classList.toggle('active',  len === 15);
+    }
+
+    function setStatus(type, message) {
+      status.className = `gstin-status ${type}`;
+      if (type === 'loading') {
+        status.innerHTML = `<div class="spinner" aria-hidden="true"></div> ${message}`;
+      } else {
+        status.textContent = message;
+      }
+    }
+
+    function clearStatus() {
+      status.className = 'gstin-status';
+      status.textContent = '';
+    }
+
+    function setHeroState(state) {
+      hero.className = `gstin-hero${state ? ' state-' + state : ''}`;
+    }
+
+    function animateFill(el, value) {
+      el.value = value;
+      el.classList.remove('autofilled');
+      void el.offsetWidth; // reflow to restart animation
+      el.classList.add('autofilled');
+    }
+
+    function clearFields() {
+      Object.values(fields).forEach(el => {
+        el.value = '';
+        el.classList.remove('autofilled');
+      });
+    }
+
+    async function lookup(gstin) {
+      setHeroState('loading');
+      setStatus('loading', 'Looking up GSTIN…');
+      clearFields();
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ gstin }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.error || 'Lookup failed');
+
+        setHeroState('success');
+        setStatus('success', `✓ Found — ${data.status}`);
+
+        // Stagger the fill animations
+        const fills = [
+          [fields.companyName,  data.companyName  || ''],
+          [fields.constitution, data.constitution  || ''],
+          [fields.addressLine1, data.addressLine1  || ''],
+          [fields.addressLine2, data.addressLine2  || ''],
+          [fields.city,         data.city          || ''],
+          [fields.state,        data.state         || ''],
+          [fields.pincode,      data.pincode       || ''],
+        ];
+
+        fills.forEach(([el, val], i) => {
+          if (val) setTimeout(() => animateFill(el, val), i * 60);
+        });
+
+      } catch (err) {
+        setHeroState('error');
+        setStatus('error', err.message || 'Could not fetch details. Enter manually.');
+      }
+    }
+
+    input.addEventListener('input', () => {
+      const raw = input.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+      input.value = raw;
+      const len = raw.length;
+
+      counter.textContent = `${len} / 15`;
+      updateSegments(len);
+      clearStatus();
+
+      if (len < 15) {
+        setHeroState('');
+        if (len < 15) clearFields();
+        clearTimeout(debounceTimer);
+        return;
+      }
+
+      if (!GST_REGEX.test(raw)) {
+        setHeroState('error');
+        setStatus('error', 'Invalid GSTIN format — check and try again.');
+        return;
+      }
+
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => lookup(raw), 300);
+    });
+  </script>
+</body>
+</html>
